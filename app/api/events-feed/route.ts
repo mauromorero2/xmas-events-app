@@ -21,15 +21,44 @@ const gql: GQL = async (shop, token, query, vars = {}) => {
   return json.data;
 };
 
+// ---- helpers ----
 function toISO(dateStr: string): string | null {
   if (!dateStr) return null;
   return dateStr.slice(0, 10); // "YYYY-MM-DD"
 }
-
 function isWeekend(iso: string) {
   const d = new Date(iso + 'T00:00:00');
   const w = d.getDay(); // 0=Dom,6=Sab
   return w === 0 || w === 6;
+}
+
+// Risolve l'handle della collection in GID via REST Admin (custom+smart)
+async function collectionGidByHandle(shop: string, token: string, handle: string): Promise<string | null> {
+  // Tenta prima custom_collections
+  const base = `https://${shop}/admin/api/${API_VERSION}`;
+  const headers = { 'X-Shopify-Access-Token': token, 'Accept': 'application/json' } as const;
+
+  // 1) custom_collections
+  {
+    const url = `${base}/custom_collections.json?handle=${encodeURIComponent(handle)}`;
+    const r = await fetch(url, { headers });
+    if (r.ok) {
+      const j: any = await r.json();
+      const col = Array.isArray(j?.custom_collections) ? j.custom_collections[0] : null;
+      if (col?.id) return `gid://shopify/Collection/${col.id}`;
+    }
+  }
+  // 2) smart_collections
+  {
+    const url = `${base}/smart_collections.json?handle=${encodeURIComponent(handle)}`;
+    const r = await fetch(url, { headers });
+    if (r.ok) {
+      const j: any = await r.json();
+      const col = Array.isArray(j?.smart_collections) ? j.smart_collections[0] : null;
+      if (col?.id) return `gid://shopify/Collection/${col.id}`;
+    }
+  }
+  return null;
 }
 
 export async function GET(req: Request) {
@@ -51,7 +80,13 @@ export async function GET(req: Request) {
     }
     const { shop, access_token: token } = rows[0] as { shop: string; access_token: string };
 
-    // 2) prova a leggere i festivi dal metafield di negozio (facoltativo)
+    // 2) risolvi handle -> GID collection
+    const collectionGid = await collectionGidByHandle(shop, token, collectionHandle);
+    if (!collectionGid) {
+      return new Response(JSON.stringify({ error: `Collection not found for handle "${collectionHandle}"` }), { status: 404 });
+    }
+
+    // 3) (facoltativo) leggi i festivi dal metafield di negozio
     let holidays: string[] = [];
     try {
       const d = await gql(shop, token, `
@@ -71,14 +106,14 @@ export async function GET(req: Request) {
       }
     } catch { /* ok se non esiste */ }
 
-    // 3) pagina i prodotti della collection
+    // 4) pagina i prodotti della collection (ora per ID)
     const events: any[] = [];
     let cursor: string | null = null;
 
     do {
       const data = await gql(shop, token, `
-        query Fetch($handle:String!, $cursor:String) {
-          collection(handle:$handle){
+        query Fetch($id: ID!, $cursor: String) {
+          collection(id: $id){
             products(first: 100, after: $cursor) {
               edges {
                 cursor
@@ -103,7 +138,7 @@ export async function GET(req: Request) {
             }
           }
         }
-      `, { handle: collectionHandle, cursor });
+      `, { id: collectionGid, cursor });
 
       const edges = data?.collection?.products?.edges || [];
       const pageInfo = data?.collection?.products?.pageInfo;
@@ -127,9 +162,11 @@ export async function GET(req: Request) {
           const qty = Math.max(0, Number(n.inventoryQuantity ?? 0));
           remaining += qty;
           if (opt1) {
+            // cart/add.js vuole l'ID numerico della variante
+            const numericId = Number(String(n.id).replace(/\D/g,''));
             slots.push({
               label: opt1,
-              id: Number(n.id.replace(/\D/g,'')),
+              id: numericId,
               rem: qty,
               available: n.availableForSale
             });
@@ -150,7 +187,12 @@ export async function GET(req: Request) {
     } while (cursor);
 
     return new Response(JSON.stringify({ month, events }), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+        // Se dovrai chiamarlo dal dominio del negozio (tema), valuta di aprire il CORS:
+        // 'Access-Control-Allow-Origin': '*'
+      }
     });
 
   } catch (err: any) {
