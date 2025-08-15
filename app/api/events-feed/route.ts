@@ -191,6 +191,8 @@ export async function GET(req: Request) {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store',
         'Access-Control-Allow-Origin': '*' 
+        // Cache in CDN 5 minuti + serve versioni stale per 10 min mentre si rigenera
+      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
       }
     });
 
