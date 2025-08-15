@@ -11,7 +11,10 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "types": ["node"]
+    "types": ["node"],
+
+    "baseUrl": ".",                   // 👈 aggiunto
+    "paths": { "@/*": ["./*"] }       // 👈 aggiunto
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]
