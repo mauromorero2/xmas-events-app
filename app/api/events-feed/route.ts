@@ -190,8 +190,7 @@ export async function GET(req: Request) {
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store',
-        // Se dovrai chiamarlo dal dominio del negozio (tema), valuta di aprire il CORS:
-        // 'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*' 
       }
     });
 
