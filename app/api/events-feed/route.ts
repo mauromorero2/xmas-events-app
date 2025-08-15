@@ -186,15 +186,15 @@ export async function GET(req: Request) {
       cursor = pageInfo?.hasNextPage ? pageInfo?.endCursor : null;
     } while (cursor);
 
-    return new Response(JSON.stringify({ month, events }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store',
-        'Access-Control-Allow-Origin': '*' 
-        // Cache in CDN 5 minuti + serve versioni stale per 10 min mentre si rigenera
-      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-      }
-    });
+return new Response(JSON.stringify({ month, events }), {
+  headers: {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    // Cache CDN 5 minuti + serve versione "stale" fino a 10 minuti mentre si rigenera
+    'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600'
+  }
+});
+
 
   } catch (err: any) {
     return new Response(JSON.stringify({ error: String(err?.message || err) }), { status: 500 });
