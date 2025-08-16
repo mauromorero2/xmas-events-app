@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { buildAuthorizeUrl, validShopDomain } from '@/lib/shopify';
+import { buildAuthorizeUrl, validShopDomain } from '@/lib/shopify-auth';
 
 export const runtime = 'nodejs';
 
