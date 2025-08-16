@@ -1,25 +1,9 @@
 export const runtime = 'nodejs';
+import { shopifyAdminGraphQL as gql } from '@/lib/shopify-admin';
 
 import { sql } from '@/lib/db';
 
-type GQL = (shop: string, token: string, query: string, vars?: Record<string, any>) => Promise<any>;
-const API_VERSION = '2024-07';
 
-const gql: GQL = async (shop, token, query, vars = {}) => {
-  const res = await fetch(`https://${shop}/admin/api/${API_VERSION}/graphql.json`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Shopify-Access-Token': token,
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify({ query, variables: vars })
-  });
-  if (!res.ok) throw new Error(`GraphQL ${res.status}`);
-  const json = await res.json();
-  if (json.errors) throw new Error(JSON.stringify(json.errors));
-  return json.data;
-};
 
 function normalizePricing(input?: string){
   let j: any;
@@ -83,4 +67,13 @@ export async function GET() {
   } catch (err: any) {
     return new Response(JSON.stringify({ error: String(err?.message || err) }), { status: 500 });
   }
+}
+export async function OPTIONS() {
+  return new Response(null, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    }
+  });
 }
