@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { sql } from '@/lib/db';
-import { verifyHmac, validShopDomain } from '@/lib/shopify';
+import { verifyHmac, validShopDomain } from '@/lib/shopify-auth';
 
 export const runtime = 'nodejs';
 
