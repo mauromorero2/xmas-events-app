@@ -15,3 +15,5 @@ redirect_urls = ["https://xmas-events-app.vercel.app/api/auth/callback"]
 [build]
 automatically_update_urls_on_dev = true
 dev_store_url = "sinflorashop.myshopify.com"
+[webhooks]
+api_version = "2024-07"
